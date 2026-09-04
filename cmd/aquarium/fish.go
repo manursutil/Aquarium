@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"math/rand"
 
 	"github.com/aquilax/go-perlin"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -40,6 +41,28 @@ type Fish struct {
 	FoodEaten int
 	FishEaten int
 	Age       float32
+}
+
+func newFish(genome Genome) Fish {
+	return Fish{
+		Position: rl.Vector2{
+			X: rand.Float32() * WindowWidth,
+			Y: rand.Float32() * WindowHeight,
+		},
+		Velocity: rl.Vector2{
+			X: rand.Float32()*InitialVelocityRange - InitialVelocityOffset,
+			Y: rand.Float32()*InitialVelocityRange - InitialVelocityOffset,
+		},
+		Angle:     rand.Float32() * FullCircleDegrees,
+		Genome:    genome,
+		NoiseX:    rand.Float64() * InitialNoiseRange,
+		Hunger:    0,
+		Health:    MaxHealth,
+		Alive:     true,
+		FoodEaten: 0,
+		FishEaten: 0,
+		Age:       0,
+	}
 }
 
 func (f *Fish) wrapEdges() {

@@ -49,7 +49,7 @@ func selectParent(candidates []Candidate) Genome {
 }
 
 func avgChannel(a uint8, b uint8) uint8 {
-	return uint8(int(a) + int(b)/2)
+	return uint8((int(a) + int(b)) / 2)
 }
 
 func mixTwoColors(a rl.Color, b rl.Color) rl.Color {
@@ -119,4 +119,20 @@ func evolve(candidates []Candidate, populationSize int) []Genome {
 	// 3. mutate the child
 	// 4. repeat until populationSize is reached
 	// Consider copying the best candidate directly into the next generation as an elite so the best genome cannot be lost
+	if populationSize <= 0 || len(candidates) == 0 {
+		return nil
+	}
+
+	nextGeneration := make([]Genome, populationSize)
+
+	for i := range populationSize {
+		parent1 := selectParent(candidates)
+		parent2 := selectParent(candidates)
+
+		childGenome := crossover(parent1, parent2)
+		mutate(&childGenome)
+		nextGeneration[i] = childGenome
+	}
+
+	return nextGeneration
 }

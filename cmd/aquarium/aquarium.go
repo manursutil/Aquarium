@@ -29,34 +29,18 @@ const (
 type Aquarium struct {
 	Fish []Fish
 	Food []Food
+
+	generationElapsed    float32
+	generationCandidates []Candidate
 }
 
-// TODO: Have current generation + next generation arrays
 // TODO: Have an 'elite' fish array for the best genomes
 
 func initAquarium(n int) Aquarium {
 	fish := make([]Fish, n)
 
 	for i := range n {
-		fish[i] = Fish{
-			Position: rl.Vector2{
-				X: rand.Float32() * WindowWidth,
-				Y: rand.Float32() * WindowHeight,
-			},
-			Velocity: rl.Vector2{
-				X: rand.Float32()*InitialVelocityRange - InitialVelocityOffset,
-				Y: rand.Float32()*InitialVelocityRange - InitialVelocityOffset,
-			},
-			Angle:     rand.Float32() * FullCircleDegrees,
-			Genome:    initRandomGenome(),
-			NoiseX:    rand.Float64() * InitialNoiseRange,
-			Hunger:    0,
-			Health:    MaxHealth,
-			Alive:     true,
-			FoodEaten: 0,
-			FishEaten: 0,
-			Age:       0,
-		}
+		fish[i] = newFish(initRandomGenome())
 	}
 
 	foodNumber := n/FishPerFood + BaseFoodCount
@@ -77,10 +61,17 @@ func initAquarium(n int) Aquarium {
 
 func (a *Aquarium) removeDead() {
 	alive := a.Fish[:0]
+
 	for _, f := range a.Fish {
 		if f.Alive {
 			alive = append(alive, f)
+			continue
 		}
+
+		a.generationCandidates = append(a.generationCandidates, Candidate{
+			Genome:  f.Genome,
+			Fitness: fitness(f),
+		})
 	}
 
 	a.Fish = alive
@@ -96,6 +87,12 @@ func (a *Aquarium) update(dt float32) {
 	a.handleFishFoodCollisions()
 	a.handleFishFishCollisions()
 	a.removeDead()
+
+	a.generationElapsed += dt
+
+	if a.generationElapsed >= GenerationDuration || len(a.Fish) == 0 {
+		a.advanceGeneration()
+	}
 }
 
 func (a *Aquarium) handleFishFoodCollisions() {
@@ -169,6 +166,22 @@ func (a *Aquarium) handleFishFishCollisions() {
 			}
 		}
 	}
+}
+
+func (a *Aquarium) advanceGeneration() {
+	candidates := append([]Candidate{}, a.generationCandidates...)
+	candidates = append(candidates, makeCandidates(a.Fish)...)
+
+	nextGenomes := evolve(candidates, InitialFishCount)
+
+	nextFish := make([]Fish, len(nextGenomes))
+	for i, genome := range nextGenomes {
+		nextFish[i] = newFish(genome)
+	}
+
+	a.Fish = nextFish
+	a.generationCandidates = nil
+	a.generationElapsed = 0
 }
 
 func (a *Aquarium) draw() {
