@@ -73,5 +73,3 @@ func initRandomGenome() Genome {
 		Color: getRandomColor(),
 	}
 }
-
-// TODO: getEliteGenomes() function

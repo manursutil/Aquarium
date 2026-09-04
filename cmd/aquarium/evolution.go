@@ -114,12 +114,6 @@ func mutate(g *Genome) {
 }
 
 func evolve(candidates []Candidate, populationSize int) []Genome {
-	// TODO: Finish this function. It should:
-	// 1. select two parents
-	// 2. crossover them
-	// 3. mutate the child
-	// 4. repeat until populationSize is reached
-	// Consider copying the best candidate directly into the next generation as an elite so the best genome cannot be lost
 	if populationSize <= 0 || len(candidates) == 0 {
 		return nil
 	}
