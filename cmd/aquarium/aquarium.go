@@ -88,7 +88,11 @@ func (a *Aquarium) update(dt float32) {
 
 	a.generationElapsed += dt
 
-	if a.generationElapsed >= GenerationDuration || len(a.Fish) == 0 {
+	if a.generationElapsed >= GenerationDuration {
+		a.generationElapsed -= GenerationDuration
+		a.advanceGeneration()
+	} else if len(a.Fish) == 0 {
+		a.generationElapsed = 0
 		a.advanceGeneration()
 	}
 }
@@ -179,7 +183,6 @@ func (a *Aquarium) advanceGeneration() {
 
 	a.Fish = nextFish
 	a.generationCandidates = nil
-	a.generationElapsed = 0
 }
 
 func (a *Aquarium) draw() {
