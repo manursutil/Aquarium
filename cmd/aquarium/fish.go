@@ -36,8 +36,10 @@ type Fish struct {
 	Health float32
 	Alive  bool
 
+	// Performace metrics
 	FoodEaten int
 	FishEaten int
+	Age       float32
 }
 
 func (f *Fish) wrapEdges() {
@@ -206,6 +208,7 @@ func (f *Fish) attackPrey(prey *Fish) {
 }
 
 func (f *Fish) update(dt float32) {
+	f.Age += dt
 	f.move(dt)
 	f.wrapEdges()
 	f.handleHunger(dt)

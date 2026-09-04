@@ -23,12 +23,16 @@ const (
 	BaseFoodCount                  = 10
 	FoodSize                       = 10
 	FoodRadius             float32 = FoodSize / 2
+	GenerationDuration     float32 = 30
 )
 
 type Aquarium struct {
 	Fish []Fish
 	Food []Food
 }
+
+// TODO: Have current generation + next generation arrays
+// TODO: Have an 'elite' fish array for the best genomes
 
 func initAquarium(n int) Aquarium {
 	fish := make([]Fish, n)
@@ -51,6 +55,7 @@ func initAquarium(n int) Aquarium {
 			Alive:     true,
 			FoodEaten: 0,
 			FishEaten: 0,
+			Age:       0,
 		}
 	}
 
