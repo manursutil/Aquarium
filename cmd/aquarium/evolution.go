@@ -11,6 +11,7 @@ const (
 	FishEatenWeight float32 = 10
 	MutationRate    float32 = 0.15
 	MutationSize    float32 = 0.10
+	EliteCount              = 1
 )
 
 type Candidate struct {
@@ -125,7 +126,19 @@ func evolve(candidates []Candidate, populationSize int) []Genome {
 
 	nextGeneration := make([]Genome, populationSize)
 
-	for i := range populationSize {
+	best := candidates[0]
+	for _, candidate := range candidates[1:] {
+		if candidate.Fitness > best.Fitness {
+			best = candidate
+		}
+	}
+
+	eliteCount := min(EliteCount, populationSize)
+	for i := range eliteCount {
+		nextGeneration[i] = best.Genome
+	}
+
+	for i := eliteCount; i < populationSize; i++ {
 		parent1 := selectParent(candidates)
 		parent2 := selectParent(candidates)
 

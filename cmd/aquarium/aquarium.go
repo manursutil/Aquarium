@@ -34,8 +34,6 @@ type Aquarium struct {
 	generationCandidates []Candidate
 }
 
-// TODO: Have an 'elite' fish array for the best genomes
-
 func initAquarium(n int) Aquarium {
 	fish := make([]Fish, n)
 
