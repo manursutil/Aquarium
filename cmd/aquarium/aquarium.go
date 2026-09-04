@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"slices"
@@ -30,6 +31,7 @@ type Aquarium struct {
 	Fish []Fish
 	Food []Food
 
+	generation           int
 	generationElapsed    float32
 	generationCandidates []Candidate
 }
@@ -54,7 +56,7 @@ func initAquarium(n int) Aquarium {
 		}
 	}
 
-	return Aquarium{Fish: fish, Food: food}
+	return Aquarium{Fish: fish, Food: food, generation: 1}
 }
 
 func (a *Aquarium) removeDead() {
@@ -183,6 +185,44 @@ func (a *Aquarium) advanceGeneration() {
 
 	a.Fish = nextFish
 	a.generationCandidates = nil
+	a.generation++
+}
+
+func (a *Aquarium) bestCurrentFitness() float32 {
+	best := float32(0)
+
+	for _, candidate := range a.generationCandidates {
+		if candidate.Fitness > best {
+			best = candidate.Fitness
+		}
+	}
+
+	for _, fish := range a.Fish {
+		score := fitness(fish)
+		if score > best {
+			best = score
+		}
+	}
+
+	return best
+}
+
+func (a *Aquarium) drawHUD() {
+	timeRemaining := max(float32(0), GenerationDuration-a.generationElapsed)
+	evaluated := len(a.generationCandidates)
+	totalFish := len(a.Fish) + evaluated
+
+	lines := []string{
+		fmt.Sprintf("Generation: %d", a.generation),
+		fmt.Sprintf("Alive: %d / %d", len(a.Fish), totalFish),
+		fmt.Sprintf("Evaluated: %d", evaluated),
+		fmt.Sprintf("Time left: %.1fs", timeRemaining),
+		fmt.Sprintf("Best fitness: %.1f", a.bestCurrentFitness()),
+		fmt.Sprintf("Food: %d", len(a.Food)),
+		fmt.Sprintf("FPS: %d", rl.GetFPS()),
+	}
+
+	drawInfoPanel(lines, UIBorder, UIBorder, HUDWidth, rl.SkyBlue)
 }
 
 func (a *Aquarium) draw() {
@@ -195,5 +235,12 @@ func (a *Aquarium) draw() {
 	for i := range len(a.Food) {
 		f := a.Food[i]
 		rl.DrawRectangle(int32(f.Position.X), int32(f.Position.Y), FoodSize, FoodSize, rl.Green)
+	}
+
+	a.drawHUD()
+
+	mouse := rl.GetMousePosition()
+	if index := hoveredFishIndex(a.Fish, mouse); index >= 0 {
+		drawFishTooltip(a.Fish[index], mouse)
 	}
 }

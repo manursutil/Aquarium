@@ -1,0 +1,123 @@
+package main
+
+import (
+	"fmt"
+	"slices"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
+
+const (
+	UIBorder      float32 = 10
+	UIPadding     float32 = 10
+	UIFontSize    int32   = 16
+	UILineHeight  float32 = 20
+	HUDWidth      float32 = 220
+	TooltipWidth  float32 = 250
+	TooltipOffset float32 = 14
+)
+
+func panelHeight(linecount int) float32 {
+	return UIPadding*2 + float32(linecount)*UILineHeight
+}
+
+func drawInfoPanel(lines []string, x float32, y float32, width float32, border rl.Color) {
+	panel := rl.Rectangle{
+		X:      x,
+		Y:      y,
+		Width:  width,
+		Height: panelHeight(len(lines)),
+	}
+
+	rl.DrawRectangleRounded(panel, 0.08, 6, rl.Fade(rl.Black, 0.85))
+	rl.DrawRectangleRoundedLinesEx(panel, 0.08, 6, 1, border)
+
+	for i, line := range lines {
+		rl.DrawText(
+			line,
+			int32(x+UIPadding),
+			int32(y+UIPadding+float32(i)*UILineHeight),
+			UIFontSize,
+			rl.RayWhite,
+		)
+	}
+}
+
+func hoveredFishIndex(fish []Fish, mouse rl.Vector2) int {
+	for i := range slices.Backward(fish) {
+		if !fish[i].Alive {
+			continue
+		}
+
+		if rl.CheckCollisionPointCircle(mouse, fish[i].Position, fish[i].Genome.Size) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func fishTooltipLines(fish Fish) []string {
+	return []string{
+		fmt.Sprintf("Health: %.1f / %.1f", fish.Health, MaxHealth),
+		fmt.Sprintf("Hunger: %.2f", fish.Hunger),
+		fmt.Sprintf("Age: %.1fs", fish.Age),
+		fmt.Sprintf("Fitness: %.1f", fitness(fish)),
+		fmt.Sprintf("Food eaten: %d", fish.FoodEaten),
+		fmt.Sprintf("Fish eaten: %d", fish.FishEaten),
+		"",
+		fmt.Sprintf("Size: %.2f", fish.Genome.Size),
+		fmt.Sprintf("Max speed: %.2f", fish.Genome.MaxSpeed),
+		fmt.Sprintf("Vision: %.2f", fish.Genome.Vision),
+		fmt.Sprintf("Metabolism: %.3f", fish.Genome.Metabolism),
+		fmt.Sprintf("Food attraction: %.2f", fish.Genome.AttractionToFood),
+		fmt.Sprintf("Predator fear: %.2f", fish.Genome.FearOfPredators),
+		fmt.Sprintf("Social attraction: %.2f", fish.Genome.AttractionToOthers),
+		fmt.Sprintf(
+			"Color: %d, %d, %d",
+			fish.Genome.Color.R,
+			fish.Genome.Color.G,
+			fish.Genome.Color.B,
+		),
+	}
+}
+
+func tooltipPosition(mouse rl.Vector2, width, height float32) rl.Vector2 {
+	x := mouse.X + TooltipOffset
+	y := mouse.Y + TooltipOffset
+	screenWidth := float32(rl.GetScreenWidth())
+	screenHeight := float32(rl.GetScreenHeight())
+
+	if x+width+UIBorder > screenWidth {
+		x = mouse.X - width - TooltipOffset
+	}
+	if y+height+UIBorder > screenHeight {
+		y = screenHeight - height - UIBorder
+	}
+
+	x = max(UIBorder, x)
+	y = max(UIBorder, y)
+
+	return rl.Vector2{X: x, Y: y}
+}
+
+func drawFishTooltip(fish Fish, mouse rl.Vector2) {
+	lines := fishTooltipLines(fish)
+	height := panelHeight(len(lines))
+	position := tooltipPosition(mouse, TooltipWidth, height)
+
+	drawInfoPanel(
+		lines,
+		position.X,
+		position.Y,
+		TooltipWidth,
+		fish.Genome.Color,
+	)
+
+	rl.DrawCircleLines(
+		int32(fish.Position.X),
+		int32(fish.Position.Y),
+		fish.Genome.Size+2,
+		rl.White,
+	)
+}
