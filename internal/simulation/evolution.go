@@ -10,22 +10,32 @@ const (
 )
 
 type Candidate struct {
-	Genome  Genome
-	Fitness float32
+	Genome    Genome
+	Fitness   float32
+	Age       float32
+	FoodEaten int
+	FishEaten int
 }
 
 func fitness(f Fish) float32 {
 	return f.Age + float32(f.FoodEaten)*FoodEatenWeight + float32(f.FishEaten)*FishEatenWeight
 }
 
+func candidateFromFish(f Fish) Candidate {
+	return Candidate{
+		Genome:    f.Genome,
+		Fitness:   fitness(f),
+		Age:       f.Age,
+		FoodEaten: f.FoodEaten,
+		FishEaten: f.FishEaten,
+	}
+}
+
 func makeCandidates(fish []Fish) []Candidate {
 	candidates := make([]Candidate, len(fish))
 
 	for i, f := range fish {
-		candidates[i] = Candidate{
-			Genome:  f.Genome,
-			Fitness: fitness(f),
-		}
+		candidates[i] = candidateFromFish(f)
 	}
 
 	return candidates

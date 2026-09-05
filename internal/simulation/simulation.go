@@ -30,6 +30,7 @@ type Simulation struct {
 	generation           int
 	generationElapsed    float32
 	generationCandidates []Candidate
+	history              []GenerationStats
 }
 
 func New(config Config, seed int64) (*Simulation, error) {
@@ -71,10 +72,7 @@ func (a *Simulation) removeDead() {
 			continue
 		}
 
-		a.generationCandidates = append(a.generationCandidates, Candidate{
-			Genome:  f.Genome,
-			Fitness: fitness(f),
-		})
+		a.generationCandidates = append(a.generationCandidates, candidateFromFish(f))
 	}
 
 	a.fish = alive
@@ -179,6 +177,9 @@ func (a *Simulation) advanceGeneration() {
 	candidates := append([]Candidate{}, a.generationCandidates...)
 	candidates = append(candidates, makeCandidates(a.fish)...)
 
+	stats := summarizeGeneration(a.generation, len(a.fish), candidates)
+	a.history = append(a.history, stats)
+
 	nextGenomes := evolve(a.rng, candidates, a.config)
 
 	nextFish := make([]Fish, len(nextGenomes))
@@ -208,4 +209,8 @@ func (a *Simulation) bestCurrentFitness() float32 {
 	}
 
 	return best
+}
+
+func (a *Simulation) History() []GenerationStats {
+	return append([]GenerationStats(nil), a.history...)
 }
