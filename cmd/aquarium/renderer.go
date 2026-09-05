@@ -73,7 +73,14 @@ func toRaylibColor(c simulation.Color) rl.Color {
 	return rl.NewColor(c.R, c.G, c.B, c.A)
 }
 
-func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats, view ViewState) {
+func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats, view ViewState, seed int64) {
+	overlay := buildFishOverlay(s.Fish, view)
+	if overlay.ShowVision {
+		drawVision(overlay.Fish)
+	}
+	for _, vector := range overlay.Vectors {
+		drawVector(overlay.Fish.Position, vector.Vector, vector.Color, vector.Thickness)
+	}
 	for _, f := range s.Fish {
 		drawFish(f)
 	}
@@ -82,17 +89,44 @@ func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats, v
 		rl.DrawRectangle(int32(f.X), int32(f.Y), 10, 10, rl.Green)
 	}
 
-	drawHUD(s)
-	drawFitnessChart(history, rl.Rectangle{X: 20, Y: 470, Width: 360, Height: 110})
+	drawHUD(s, view, seed)
+	drawControls(view)
+	if view.SummaryVisibleFor > 0 && len(history) > 0 && !(view.HideFastSummaries && view.SpeedMultiplier == 20) {
+		drawGenerationSummary(history[len(history)-1])
+	}
+	drawFitnessChart(history, rl.Rectangle{X: 20, Y: 390, Width: 360, Height: 100})
 	if view.HasSelectedFish {
 		if fish, found := fishByID(s.Fish, view.SelectedFishID); found {
-			drawPinnedFishInspector(fish, s.MaxHealth)
+			drawPinnedFishInspector(fish, s.MaxHealth, s.Generation)
 			return
 		}
 	}
 
 	mouse := rl.GetMousePosition()
 	if i := hoveredFishIndex(s.Fish, mouse); i >= 0 {
-		drawFishTooltip(s.Fish[i], mouse, s.MaxHealth)
+		drawFishTooltip(s.Fish[i], mouse, s.MaxHealth, s.Generation)
 	}
+}
+
+func drawVision(f simulation.FishSnapshot) {
+	rl.DrawCircleLines(
+		int32(f.Position.X),
+		int32(f.Position.Y),
+		f.Genome.Vision,
+		rl.Fade(toRaylibColor(f.Color), 0.25),
+	)
+}
+
+func drawVector(origin simulation.Vector2, vector simulation.Vector2, color rl.Color, thickness float32) {
+	if vector.X == 0 && vector.Y == 0 {
+		return
+	}
+
+	start := toRaylibVector(origin)
+	end := rl.Vector2{
+		X: origin.X + vector.X,
+		Y: origin.Y + vector.Y,
+	}
+
+	rl.DrawLineEx(start, end, thickness, color)
 }

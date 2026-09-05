@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math/rand/v2"
 
 	"aquarium/internal/simulation"
 
@@ -12,24 +13,21 @@ const (
 	WindowTitle              = "Aquarium"
 	TargetFPS                = 60
 	fixedStep        float32 = 1.0 / 60.0
-	maxStepsPerFrame         = 10
+	maxStepsPerFrame         = 40
 )
 
 type AppState struct {
-	config simulation.Config
-	seed   int64
-	sim    *simulation.Simulation
-	view   ViewState
+	config      simulation.Config
+	seed        int64
+	sim         *simulation.Simulation
+	view        ViewState
+	accumulator float64
 }
 
 func main() {
-	config := simulation.DefaultConfig()
-	aquarium, err := simulation.New(config, 42)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	view := ViewState{SpeedMultiplier: 1}
+	app := AppState{config: simulation.DefaultConfig(), seed: 42, view: ViewState{SpeedMultiplier: 1}}
+	app.restart(app.seed)
+	config := app.config
 
 	rl.InitWindow(int32(config.WorldWidth), int32(config.WorldHeight), WindowTitle)
 	defer rl.CloseWindow()
@@ -37,41 +35,30 @@ func main() {
 
 	rl.SetTargetFPS(TargetFPS)
 
-	var accumulator float32
-
 	for !rl.WindowShouldClose() {
-		updateViewState(&view)
-
-		frameTime := rl.GetFrameTime()
-		if !view.Paused {
-			accumulator += frameTime * float32(view.SpeedMultiplier)
+		updateViewState(&app.view)
+		if rl.IsKeyPressed(rl.KeyR) {
+			app.restart(app.seed)
 		}
-
-		steps := 0
-		for accumulator >= fixedStep && steps < maxStepsPerFrame {
-			aquarium.Step(fixedStep)
-			accumulator -= fixedStep
-			steps++
-		}
-
-		if steps == maxStepsPerFrame && accumulator >= fixedStep {
-			accumulator = 0
-		}
-
-		snapshot := aquarium.Snapshot()
-		history := aquarium.History()
-
-		pinFish(&view, snapshot.Fish, rl.GetMousePosition())
-		if view.HasSelectedFish {
-			if _, found := fishByID(snapshot.Fish, view.SelectedFishID); !found {
-				view.HasSelectedFish = false
+		if rl.IsKeyPressed(rl.KeyN) {
+			seed := rand.Int64()
+			for seed == app.seed {
+				seed = rand.Int64()
 			}
+			app.restart(seed)
 		}
+		frameTime := rl.GetFrameTime()
+		app.advance(frameTime)
+		snapshot := app.sim.Snapshot()
+		history := app.sim.History()
+		pinFish(&app.view, snapshot.Fish, rl.GetMousePosition())
+		app.view.clearMissingSelection(snapshot.Fish)
+		app.view.updateSummary(len(history), frameTime)
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Blue)
 
-		drawAquarium(snapshot, history, view)
+		drawAquarium(snapshot, history, app.view, app.seed)
 
 		rl.EndDrawing()
 	}
@@ -94,5 +81,36 @@ func pinFish(view *ViewState, fish []simulation.FishSnapshot, mouse rl.Vector2) 
 	if index := hoveredFishIndex(fish, mouse); index >= 0 {
 		view.SelectedFishID = fish[index].ID
 		view.HasSelectedFish = true
+	}
+}
+
+func (app *AppState) restart(seed int64) {
+	app.sim = NewSimulation(app.config, seed)
+	app.seed = seed
+	app.accumulator = 0
+	app.view.HasSelectedFish = false
+	app.view.SelectedFishID = 0
+	app.view.LastHistoryCount = 0
+	app.view.SummaryVisibleFor = 0
+}
+
+// Use float64 for the clock so 20 steps do not round down to 19.
+func simulationSteps(accumulator float64, frameTime float32, speed int) (int, float64) {
+	budget := accumulator + float64(frameTime)*float64(speed)
+	steps := int(budget / float64(fixedStep))
+	if steps >= maxStepsPerFrame {
+		return maxStepsPerFrame, 0
+	}
+	return steps, budget - float64(steps)*float64(fixedStep)
+}
+
+func (app *AppState) advance(frameTime float32) {
+	if app.view.Paused {
+		return
+	}
+	steps, remainder := simulationSteps(app.accumulator, frameTime, app.view.SpeedMultiplier)
+	app.accumulator = remainder
+	for range steps {
+		app.sim.Step(fixedStep)
 	}
 }

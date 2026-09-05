@@ -17,6 +17,26 @@ Requires Go 1.27.1 or later.
 go run ./cmd/aquarium
 ```
 
+Space pauses or resumes. Keys `1`, `2`, and `3` select 1x, 5x, and 20x.
+`R` restarts the displayed seed; `N` starts a new seed. Restarts preserve
+configuration, pause/speed, and overlay preferences, and clear selection,
+timing backlog, and summaries. Catch-up is capped at 40 steps per frame;
+excess time is discarded after a stalled frame, so effective speed can drop
+under load.
+
+The HUD shows the seed, controls, and current settings. Completed generations
+show a two-second summary using wall time, including while paused. Press `S`
+to hide summaries at 20x. The fitness chart remains visible below the summary.
+
+Click a fish to pin its inspector; Escape unpins it. Press `V` to toggle the
+pinned fish's vision circle and `F` to toggle its steering vectors. Both overlays
+start disabled. Green is food, gold is social attraction, magenta is predator
+response, and the thicker white line is their combined response before wandering.
+Component lines are 60 pixels long and the combined line is 80 pixels: they show
+direction, not magnitude. A zero response draws no line. The snapshot retains
+the actual velocity changes after behavioral weighting and acceleration/speed
+limits; overlays do not change simulation behavior.
+
 ## Test
 
 ```sh
@@ -33,7 +53,7 @@ live state. The same seed, configuration, and sequence of time steps reproduce
 the same run.
 
 `cmd/aquarium` owns the window, drawing, HUD, and hover inspector. It currently
-uses seed 42 and frame-time updates. Default tuning preserves the original
+starts with seed 42 and fixed 1/60-second simulation steps. Default tuning preserves the original
 strictly-larger-fish predation rule; configuration can require a larger ratio.
 
 Run the core and many-generation replay tests without graphics dependencies:

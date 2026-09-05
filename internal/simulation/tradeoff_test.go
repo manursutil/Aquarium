@@ -87,6 +87,18 @@ func TestSteeringPathsUseAcceleration(t *testing.T) {
 			f.steerAwayFromPredators([]Fish{other}, 0.1, c)
 		}
 		near(t, length(f.Velocity), 3)
+		var recorded Vector2
+		switch mode {
+		case "food":
+			recorded = f.steering.Food
+		case "social":
+			recorded = f.steering.Social
+		case "predator":
+			recorded = f.steering.Predator
+		}
+		if recorded != f.Velocity {
+			t.Fatalf("%s recorded %v, want applied change %v", mode, recorded, f.Velocity)
+		}
 	}
 }
 

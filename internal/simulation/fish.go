@@ -30,6 +30,7 @@ type Fish struct {
 	Velocity Vector2
 	Angle    float32
 	Genome   Genome
+	steering SteeringSnapshot
 
 	NoiseX float64
 
@@ -148,7 +149,9 @@ func (f *Fish) attractionToSimilarFish(others []Fish, dt float32, config Config)
 	}
 
 	steering := subtract(desiredVel, f.Velocity)
+	before := f.Velocity
 	f.applySteering(add(f.Velocity, scale(steering, steeringStrength)), dt, config)
+	f.steering.Social = subtract(f.Velocity, before)
 }
 
 func (f *Fish) steerTowardFood(foods []Food, dt float32, config Config) {
@@ -178,7 +181,9 @@ func (f *Fish) steerTowardFood(foods []Food, dt float32, config Config) {
 	}
 
 	steering := subtract(desiredVel, f.Velocity)
+	before := f.Velocity
 	f.applySteering(add(f.Velocity, scale(steering, steeringStrength)), dt, config)
+	f.steering.Food = subtract(f.Velocity, before)
 }
 
 func (f *Fish) steerAwayFromPredators(others []Fish, dt float32, config Config) {
@@ -208,7 +213,9 @@ func (f *Fish) steerAwayFromPredators(others []Fish, dt float32, config Config) 
 	}
 
 	steering := subtract(desiredVel, f.Velocity)
+	before := f.Velocity
 	f.applySteering(add(f.Velocity, scale(steering, steeringStrength)), dt, config)
+	f.steering.Predator = subtract(f.Velocity, before)
 }
 
 func (f *Fish) attackPrey(prey *Fish, config Config) {

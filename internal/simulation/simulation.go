@@ -80,9 +80,15 @@ func (a *Simulation) removeDead() {
 
 func (a *Simulation) Step(dt float32) {
 	for i := range len(a.fish) {
+		a.fish[i].steering = SteeringSnapshot{}
+		before := a.fish[i].Velocity
+
 		a.fish[i].attractionToSimilarFish(a.fish, dt, a.config)
 		a.fish[i].steerTowardFood(a.food, dt, a.config)
 		a.fish[i].steerAwayFromPredators(a.fish, dt, a.config)
+
+		a.fish[i].steering.Final = subtract(a.fish[i].Velocity, before)
+
 		a.fish[i].update(dt, a.config)
 	}
 	a.handleFishFoodCollisions()

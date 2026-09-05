@@ -7,18 +7,22 @@ import (
 )
 
 type ViewState struct {
-	Paused          bool
-	SpeedMultiplier int
-	ShowVision      bool
-	ShowSteering    bool
-	SelectedFishID  simulation.FishID
-	HasSelectedFish bool
+	HideFastSummaries bool
+	Paused            bool
+	SpeedMultiplier   int
+	ShowVision        bool
+	ShowSteering      bool
+	SelectedFishID    simulation.FishID
+	HasSelectedFish   bool
 
 	SummaryVisibleFor float32
 	LastHistoryCount  int
 }
 
 func updateViewState(view *ViewState) {
+	if rl.IsKeyPressed(rl.KeyS) {
+		view.HideFastSummaries = !view.HideFastSummaries
+	}
 	if rl.IsKeyPressed(rl.KeySpace) {
 		view.Paused = !view.Paused
 	}
@@ -40,4 +44,18 @@ func updateViewState(view *ViewState) {
 	if rl.IsKeyPressed(rl.KeyEscape) {
 		view.HasSelectedFish = false
 	}
+}
+
+func (view *ViewState) clearMissingSelection(fish []simulation.FishSnapshot) {
+	if _, found := fishByID(fish, view.SelectedFishID); view.HasSelectedFish && !found {
+		view.HasSelectedFish = false
+	}
+}
+
+func (view *ViewState) updateSummary(count int, frameTime float32) {
+	view.SummaryVisibleFor = max(0, view.SummaryVisibleFor-frameTime)
+	if count > view.LastHistoryCount {
+		view.SummaryVisibleFor = 2
+	}
+	view.LastHistoryCount = count
 }
