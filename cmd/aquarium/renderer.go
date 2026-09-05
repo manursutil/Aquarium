@@ -1,8 +1,9 @@
 package main
 
 import (
-	"aquarium/internal/simulation"
 	"math"
+
+	"aquarium/internal/simulation"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -72,7 +73,7 @@ func toRaylibColor(c simulation.Color) rl.Color {
 	return rl.NewColor(c.R, c.G, c.B, c.A)
 }
 
-func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats) {
+func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats, view ViewState) {
 	for _, f := range s.Fish {
 		drawFish(f)
 	}
@@ -83,6 +84,12 @@ func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats) {
 
 	drawHUD(s)
 	drawFitnessChart(history, rl.Rectangle{X: 20, Y: 470, Width: 360, Height: 110})
+	if view.HasSelectedFish {
+		if fish, found := fishByID(s.Fish, view.SelectedFishID); found {
+			drawPinnedFishInspector(fish, s.MaxHealth)
+			return
+		}
+	}
 
 	mouse := rl.GetMousePosition()
 	if i := hoveredFishIndex(s.Fish, mouse); i >= 0 {

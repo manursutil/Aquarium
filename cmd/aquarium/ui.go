@@ -112,6 +112,17 @@ func drawFishTooltip(fish simulation.FishSnapshot, mouse rl.Vector2, maxHealth f
 		toRaylibColor(fish.Color),
 	)
 
+	drawFishSelectionRing(fish)
+}
+
+func drawPinnedFishInspector(fish simulation.FishSnapshot, maxHealth float32) {
+	lines := append([]string{"Pinned fish (Esc to unpin)", ""}, fishTooltipLines(fish, maxHealth)...)
+	x := max(UIBorder, float32(rl.GetScreenWidth())-TooltipWidth-UIBorder)
+	drawInfoPanel(lines, x, UIBorder, TooltipWidth, toRaylibColor(fish.Color))
+	drawFishSelectionRing(fish)
+}
+
+func drawFishSelectionRing(fish simulation.FishSnapshot) {
 	rl.DrawCircleLines(
 		int32(fish.Position.X),
 		int32(fish.Position.Y),
