@@ -121,7 +121,7 @@ func (f *Fish) checkDeath() {
 	}
 }
 
-func (f *Fish) attractionToSimilarFish(others []Fish, dt float32) {
+func (f *Fish) attractionToSimilarFish(others []Fish, dt float32, config Config) {
 	closestIndex := -1
 	closestDistance := f.Genome.Vision
 
@@ -148,10 +148,10 @@ func (f *Fish) attractionToSimilarFish(others []Fish, dt float32) {
 	}
 
 	steering := subtract(desiredVel, f.Velocity)
-	f.Velocity = add(f.Velocity, scale(steering, steeringStrength))
+	f.applySteering(add(f.Velocity, scale(steering, steeringStrength)), dt, config)
 }
 
-func (f *Fish) steerTowardFood(foods []Food, dt float32) {
+func (f *Fish) steerTowardFood(foods []Food, dt float32, config Config) {
 	closestIndex := -1
 	closestDistance := f.Genome.Vision
 
@@ -178,10 +178,10 @@ func (f *Fish) steerTowardFood(foods []Food, dt float32) {
 	}
 
 	steering := subtract(desiredVel, f.Velocity)
-	f.Velocity = add(f.Velocity, scale(steering, steeringStrength))
+	f.applySteering(add(f.Velocity, scale(steering, steeringStrength)), dt, config)
 }
 
-func (f *Fish) steerAwayFromPredators(others []Fish, dt float32) {
+func (f *Fish) steerAwayFromPredators(others []Fish, dt float32, config Config) {
 	closestIndex := -1
 	closestDistance := f.Genome.Vision
 
@@ -208,7 +208,7 @@ func (f *Fish) steerAwayFromPredators(others []Fish, dt float32) {
 	}
 
 	steering := subtract(desiredVel, f.Velocity)
-	f.Velocity = add(f.Velocity, scale(steering, steeringStrength))
+	f.applySteering(add(f.Velocity, scale(steering, steeringStrength)), dt, config)
 }
 
 func (f *Fish) attackPrey(prey *Fish, config Config) {
@@ -217,7 +217,7 @@ func (f *Fish) attackPrey(prey *Fish, config Config) {
 	}
 
 	wasAlive := prey.Alive
-	prey.Health -= CollisionDamage
+	prey.Health = max(0, prey.Health-CollisionDamage)
 	prey.checkDeath()
 
 	f.Health += PredationHealthGain
@@ -236,4 +236,23 @@ func (f *Fish) update(dt float32, config Config) {
 	f.wrapEdges(config)
 	f.handleHunger(dt, config)
 	f.checkDeath()
+}
+
+// applySteering bounds each steering response after behavioral weighting.
+// A zero BaseAcceleration preserves the unbounded control behavior.
+func (f *Fish) applySteering(desired Vector2, dt float32, config Config) {
+	if dt <= 0 {
+		return
+	}
+	change := subtract(desired, f.Velocity)
+	if config.BaseAcceleration > 0 {
+		acceleration := config.BaseAcceleration * (MinFishSize / max(f.Genome.Size, MinFishSize))
+		change = clampMagnitude(change, 0, acceleration*dt)
+	}
+	f.Velocity = clampMagnitude(add(f.Velocity, change), 0, f.Genome.MaxSpeed)
+}
+
+func canEat(predator, prey Fish, requiredRatio float32) bool {
+	return predator.Genome.Size > prey.Genome.Size &&
+		predator.Genome.Size >= prey.Genome.Size*requiredRatio
 }

@@ -17,7 +17,7 @@ type Config struct {
 	SpeedEnergyWeight  float32
 	SizeEnergyWeight   float32
 	VisionEnergyWeight float32
-	BaseAcceleration   float32
+	BaseAcceleration   float32 // Per steering response; zero disables the limit.
 }
 
 func DefaultConfig() Config {
@@ -74,6 +74,11 @@ func (c Config) Validate() error {
 		if value < 0 || math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
 			return fmt.Errorf("%s must be finite and nonnegative", name)
 		}
+	}
+
+	// The sum must remain representable, not just the individual weights.
+	if float64(c.SpeedEnergyWeight)+float64(c.SizeEnergyWeight)+float64(c.VisionEnergyWeight)+float64(MinMetabolism+MetabolismRange) > math.MaxFloat32 {
+		return fmt.Errorf("combined hunger rate exceeds float32 range")
 	}
 
 	if c.PopulationSize <= 0 {

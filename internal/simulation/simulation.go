@@ -80,9 +80,9 @@ func (a *Simulation) removeDead() {
 
 func (a *Simulation) Step(dt float32) {
 	for i := range len(a.fish) {
-		a.fish[i].attractionToSimilarFish(a.fish, dt)
-		a.fish[i].steerTowardFood(a.food, dt)
-		a.fish[i].steerAwayFromPredators(a.fish, dt)
+		a.fish[i].attractionToSimilarFish(a.fish, dt, a.config)
+		a.fish[i].steerTowardFood(a.food, dt, a.config)
+		a.fish[i].steerAwayFromPredators(a.fish, dt, a.config)
 		a.fish[i].update(dt, a.config)
 	}
 	a.handleFishFoodCollisions()
@@ -162,10 +162,13 @@ func (a *Simulation) handleFishFishCollisions() {
 				colorDist := colorDistance(f1.Genome.Color, f2.Genome.Color)
 
 				if colorDist > PredationColorDistance {
-					if f1.Genome.Size > f2.Genome.Size && f1.Genome.Size >= f2.Genome.Size*a.config.PredationSizeRatio {
+					if canEat(*f1, *f2, a.config.PredationSizeRatio) {
 						f1.attackPrey(f2, a.config)
-					} else if f1.Genome.Size < f2.Genome.Size && f2.Genome.Size >= f1.Genome.Size*a.config.PredationSizeRatio {
+					} else if canEat(*f2, *f1, a.config.PredationSizeRatio) {
 						f2.attackPrey(f1, a.config)
+						if !f1.Alive {
+							break
+						}
 					}
 				}
 			}
