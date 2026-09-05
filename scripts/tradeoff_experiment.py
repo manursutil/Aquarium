@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce milestone 4 paired experiments (Python standard library + Go)."""
+"""Reproduce paired experiments (Python standard library + Go)."""
 
 import csv
 import statistics as stats
