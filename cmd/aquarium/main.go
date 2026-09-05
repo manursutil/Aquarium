@@ -1,32 +1,37 @@
 package main
 
 import (
+	"aquarium/internal/simulation"
+	"log"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const (
-	WindowWidth      = 800
-	WindowHeight     = 600
-	WindowTitle      = "Aquarium"
-	InitialFishCount = 50
-	TargetFPS        = 60
+	WindowTitle = "Aquarium"
+	TargetFPS   = 60
 )
 
 func main() {
-	aquarium := initAquarium(InitialFishCount)
+	config := simulation.DefaultConfig()
+	aquarium, err := simulation.New(config, 42)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	rl.InitWindow(WindowWidth, WindowHeight, WindowTitle)
+	rl.InitWindow(int32(config.WorldWidth), int32(config.WorldHeight), WindowTitle)
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(TargetFPS)
 
 	for !rl.WindowShouldClose() {
+		dt := rl.GetFrameTime()
+		aquarium.Step(dt)
+		snapshot := aquarium.Snapshot()
+
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Blue)
-
-		dt := rl.GetFrameTime()
-		aquarium.update(dt)
-		aquarium.draw()
+		drawAquarium(snapshot)
 
 		rl.EndDrawing()
 	}

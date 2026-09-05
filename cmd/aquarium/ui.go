@@ -1,6 +1,7 @@
 package main
 
 import (
+	"aquarium/internal/simulation"
 	"fmt"
 	"slices"
 
@@ -43,13 +44,10 @@ func drawInfoPanel(lines []string, x float32, y float32, width float32, border r
 	}
 }
 
-func hoveredFishIndex(fish []Fish, mouse rl.Vector2) int {
+func hoveredFishIndex(fish []simulation.FishSnapshot, mouse rl.Vector2) int {
 	for i := range slices.Backward(fish) {
-		if !fish[i].Alive {
-			continue
-		}
 
-		if rl.CheckCollisionPointCircle(mouse, fish[i].Position, fish[i].Genome.Size) {
+		if rl.CheckCollisionPointCircle(mouse, toRaylibVector(fish[i].Position), fish[i].Radius) {
 			return i
 		}
 	}
@@ -57,12 +55,12 @@ func hoveredFishIndex(fish []Fish, mouse rl.Vector2) int {
 	return -1
 }
 
-func fishTooltipLines(fish Fish) []string {
+func fishTooltipLines(fish simulation.FishSnapshot, maxHealth float32) []string {
 	return []string{
-		fmt.Sprintf("Health: %.1f / %.1f", fish.Health, MaxHealth),
+		fmt.Sprintf("Health: %.1f / %.1f", fish.Health, maxHealth),
 		fmt.Sprintf("Hunger: %.2f", fish.Hunger),
 		fmt.Sprintf("Age: %.1fs", fish.Age),
-		fmt.Sprintf("Fitness: %.1f", fitness(fish)),
+		fmt.Sprintf("Fitness: %.1f", fish.Fitness),
 		fmt.Sprintf("Food eaten: %d", fish.FoodEaten),
 		fmt.Sprintf("Fish eaten: %d", fish.FishEaten),
 		"",
@@ -101,8 +99,8 @@ func tooltipPosition(mouse rl.Vector2, width, height float32) rl.Vector2 {
 	return rl.Vector2{X: x, Y: y}
 }
 
-func drawFishTooltip(fish Fish, mouse rl.Vector2) {
-	lines := fishTooltipLines(fish)
+func drawFishTooltip(fish simulation.FishSnapshot, mouse rl.Vector2, maxHealth float32) {
+	lines := fishTooltipLines(fish, maxHealth)
 	height := panelHeight(len(lines))
 	position := tooltipPosition(mouse, TooltipWidth, height)
 
@@ -111,7 +109,7 @@ func drawFishTooltip(fish Fish, mouse rl.Vector2) {
 		position.X,
 		position.Y,
 		TooltipWidth,
-		fish.Genome.Color,
+		toRaylibColor(fish.Color),
 	)
 
 	rl.DrawCircleLines(
@@ -120,4 +118,17 @@ func drawFishTooltip(fish Fish, mouse rl.Vector2) {
 		fish.Genome.Size+2,
 		rl.White,
 	)
+}
+
+func drawHUD(s simulation.Snapshot) {
+	lines := []string{
+		fmt.Sprintf("Generation: %d", s.Generation),
+		fmt.Sprintf("Alive: %d / %d", len(s.Fish), len(s.Fish)+s.Evaluated),
+		fmt.Sprintf("Evaluated: %d", s.Evaluated),
+		fmt.Sprintf("Time left: %.1fs", max(float32(0), s.GenerationDuration-s.GenerationElapsed)),
+		fmt.Sprintf("Best fitness: %.1f", s.BestFitness),
+		fmt.Sprintf("Food: %d", len(s.Food)),
+		fmt.Sprintf("FPS: %d", rl.GetFPS()),
+	}
+	drawInfoPanel(lines, UIBorder, UIBorder, HUDWidth, rl.SkyBlue)
 }

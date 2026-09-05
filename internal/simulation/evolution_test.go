@@ -1,10 +1,8 @@
-package main
+package simulation
 
 import (
 	"math/rand"
 	"testing"
-
-	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func TestFitnessRewardsSurvivalAndFeeding(t *testing.T) {
@@ -23,24 +21,24 @@ func TestFitnessRewardsSurvivalAndFeeding(t *testing.T) {
 func TestCrossoverAveragesColorChannelsWithoutOverflow(t *testing.T) {
 	a := validTestGenome()
 	b := validTestGenome()
-	a.Color = rl.NewColor(240, 70, 250, 10)
-	b.Color = rl.NewColor(245, 210, 250, 20)
+	a.Color = newColor(240, 70, 250, 10)
+	b.Color = newColor(245, 210, 250, 20)
 
 	got := crossover(a, b).Color
-	want := rl.NewColor(242, 140, 250, OpaqueAlpha)
+	want := newColor(242, 140, 250, OpaqueAlpha)
 	if got != want {
 		t.Fatalf("crossover color = %+v, want %+v", got, want)
 	}
 }
 
 func TestMutationKeepsGenomeWithinValidRanges(t *testing.T) {
-	rand.Seed(1)
+	rng := rand.New(rand.NewSource(1))
 	genome := validTestGenome()
 	changed := false
 
 	for range 2_000 {
 		before := genome
-		mutate(&genome)
+		mutate(rng, DefaultConfig(), &genome)
 		assertGenomeWithinBounds(t, genome)
 		if genome != before {
 			changed = true
@@ -53,26 +51,26 @@ func TestMutationKeepsGenomeWithinValidRanges(t *testing.T) {
 }
 
 func TestEvolveReturnsRequestedPopulationSize(t *testing.T) {
-	rand.Seed(2)
+	rng := rand.New(rand.NewSource(2))
 	candidates := []Candidate{{Genome: validTestGenome(), Fitness: 1}}
 
 	const populationSize = 7
-	if got := len(evolve(candidates, populationSize)); got != populationSize {
+	if got := len(evolve(rng, candidates, testConfig(populationSize))); got != populationSize {
 		t.Fatalf("next generation size = %d, want %d", got, populationSize)
 	}
 }
 
 func TestEvolvePreservesBestGenomeAsElite(t *testing.T) {
-	rand.Seed(3)
+	rng := rand.New(rand.NewSource(3))
 	weakGenome := validTestGenome()
 	bestGenome := validTestGenome()
-	bestGenome.Color = rl.NewColor(1, 2, 3, OpaqueAlpha)
+	bestGenome.Color = newColor(1, 2, 3, OpaqueAlpha)
 	candidates := []Candidate{
 		{Genome: weakGenome, Fitness: 10},
 		{Genome: bestGenome, Fitness: 100},
 	}
 
-	nextGeneration := evolve(candidates, 5)
+	nextGeneration := evolve(rng, candidates, testConfig(5))
 
 	if got := nextGeneration[0]; got != bestGenome {
 		t.Fatalf("elite genome = %+v, want %+v", got, bestGenome)
@@ -88,7 +86,7 @@ func validTestGenome() Genome {
 		AttractionToFood:   0.5,
 		FearOfPredators:    0.5,
 		AttractionToOthers: 0.5,
-		Color:              rl.NewColor(100, 120, 140, OpaqueAlpha),
+		Color:              newColor(100, 120, 140, OpaqueAlpha),
 	}
 }
 
@@ -119,3 +117,5 @@ func assertGenomeWithinBounds(t *testing.T, genome Genome) {
 		t.Errorf("color alpha = %d, want %d", genome.Color.A, OpaqueAlpha)
 	}
 }
+
+func testConfig(n int) Config { c := DefaultConfig(); c.PopulationSize = n; return c }

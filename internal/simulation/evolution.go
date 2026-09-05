@@ -1,17 +1,12 @@
-package main
+package simulation
 
 import (
 	"math/rand"
-
-	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const (
 	FoodEatenWeight float32 = 5
 	FishEatenWeight float32 = 10
-	MutationRate    float32 = 0.15
-	MutationSize    float32 = 0.10
-	EliteCount              = 1
 )
 
 type Candidate struct {
@@ -36,11 +31,11 @@ func makeCandidates(fish []Fish) []Candidate {
 	return candidates
 }
 
-func selectParent(candidates []Candidate) Genome {
-	best := candidates[rand.Intn(len(candidates))]
+func selectParent(rng *rand.Rand, candidates []Candidate) Genome {
+	best := candidates[rng.Intn(len(candidates))]
 
 	for range 3 {
-		candidate := candidates[rand.Intn(len(candidates))]
+		candidate := candidates[rng.Intn(len(candidates))]
 		if candidate.Fitness > best.Fitness {
 			best = candidate
 		}
@@ -53,8 +48,8 @@ func avgChannel(a uint8, b uint8) uint8 {
 	return uint8((int(a) + int(b)) / 2)
 }
 
-func mixTwoColors(a rl.Color, b rl.Color) rl.Color {
-	return rl.Color{
+func mixTwoColors(a Color, b Color) Color {
+	return Color{
 		R: avgChannel(a.R, b.R),
 		G: avgChannel(a.G, b.G),
 		B: avgChannel(a.B, b.B),
@@ -77,43 +72,44 @@ func crossover(a Genome, b Genome) Genome {
 	return childGenome
 }
 
-func mutateFloat(value *float32, minV float32, maxV float32) {
-	if rand.Float32() >= MutationRate {
+func mutateFloat(rng *rand.Rand, config Config, value *float32, minV float32, maxV float32) {
+	if rng.Float32() >= config.MutationRate {
 		return
 	}
 
 	rangeSize := maxV - minV
-	delta := (rand.Float32()*2 - 1) * rangeSize * MutationSize
+	delta := (rng.Float32()*2 - 1) * rangeSize * config.MutationSize
 	*value = max(minV, min(maxV, *value+delta))
 }
 
-func mutate(g *Genome) {
+func mutate(rng *rand.Rand, config Config, g *Genome) {
 	if g == nil {
 		return
 	}
 
-	mutateFloat(&g.Size, MinFishSize, MinFishSize+FishSizeRange)
-	mutateFloat(&g.MaxSpeed, MinFishSpeed, MinFishSpeed+FishSpeedRange)
-	mutateFloat(&g.Vision, MinFishVision, MinFishVision+FishVisionRange)
-	mutateFloat(&g.Metabolism, MinMetabolism, MinMetabolism+MetabolismRange)
+	mutateFloat(rng, config, &g.Size, MinFishSize, MinFishSize+FishSizeRange)
+	mutateFloat(rng, config, &g.MaxSpeed, MinFishSpeed, MinFishSpeed+FishSpeedRange)
+	mutateFloat(rng, config, &g.Vision, MinFishVision, MinFishVision+FishVisionRange)
+	mutateFloat(rng, config, &g.Metabolism, MinMetabolism, MinMetabolism+MetabolismRange)
 
-	mutateFloat(&g.AttractionToFood, 0, 1)
-	mutateFloat(&g.FearOfPredators, 0, 1)
-	mutateFloat(&g.AttractionToOthers, 0, 1)
+	mutateFloat(rng, config, &g.AttractionToFood, 0, 1)
+	mutateFloat(rng, config, &g.FearOfPredators, 0, 1)
+	mutateFloat(rng, config, &g.AttractionToOthers, 0, 1)
 
-	if rand.Float32() < MutationRate {
-		switch rand.Intn(3) {
+	if rng.Float32() < config.MutationRate {
+		switch rng.Intn(3) {
 		case 0:
-			g.Color.R = jitterColorChannel(g.Color.R)
+			g.Color.R = jitterColorChannel(rng, g.Color.R)
 		case 1:
-			g.Color.G = jitterColorChannel(g.Color.G)
+			g.Color.G = jitterColorChannel(rng, g.Color.G)
 		case 2:
-			g.Color.B = jitterColorChannel(g.Color.B)
+			g.Color.B = jitterColorChannel(rng, g.Color.B)
 		}
 	}
 }
 
-func evolve(candidates []Candidate, populationSize int) []Genome {
+func evolve(rng *rand.Rand, candidates []Candidate, config Config) []Genome {
+	populationSize := config.PopulationSize
 	if populationSize <= 0 || len(candidates) == 0 {
 		return nil
 	}
@@ -127,17 +123,17 @@ func evolve(candidates []Candidate, populationSize int) []Genome {
 		}
 	}
 
-	eliteCount := min(EliteCount, populationSize)
+	eliteCount := min(config.EliteCount, populationSize)
 	for i := range eliteCount {
 		nextGeneration[i] = best.Genome
 	}
 
 	for i := eliteCount; i < populationSize; i++ {
-		parent1 := selectParent(candidates)
-		parent2 := selectParent(candidates)
+		parent1 := selectParent(rng, candidates)
+		parent2 := selectParent(rng, candidates)
 
 		childGenome := crossover(parent1, parent2)
-		mutate(&childGenome)
+		mutate(rng, config, &childGenome)
 		nextGeneration[i] = childGenome
 	}
 

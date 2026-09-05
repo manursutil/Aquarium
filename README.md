@@ -22,3 +22,23 @@ go run ./cmd/aquarium
 ```sh
 go test ./...
 ```
+
+## Simulation API
+
+`internal/simulation` owns world rules, food, movement, evolution, and generation
+timing without importing Raylib. Create a world with
+`simulation.New(simulation.DefaultConfig(), 42)`, advance it with `Step(dt)`
+(seconds), and read `Snapshot()`. Snapshots own their slices and do not expose
+live state. The same seed, configuration, and sequence of time steps reproduce
+the same run.
+
+`cmd/aquarium` owns the window, drawing, HUD, and hover inspector. It currently
+uses seed 42 and frame-time updates. Default tuning preserves the original
+strictly-larger-fish predation rule; configuration can require a larger ratio.
+
+Run the core and many-generation replay tests without graphics dependencies:
+
+```sh
+CGO_ENABLED=0 go test ./internal/simulation ./tests/integration
+go vet ./...
+```
