@@ -72,7 +72,7 @@ func toRaylibColor(c simulation.Color) rl.Color {
 	return rl.NewColor(c.R, c.G, c.B, c.A)
 }
 
-func drawAquarium(s simulation.Snapshot) {
+func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats) {
 	for _, f := range s.Fish {
 		drawFish(f)
 	}
@@ -82,6 +82,7 @@ func drawAquarium(s simulation.Snapshot) {
 	}
 
 	drawHUD(s)
+	drawFitnessChart(history, rl.Rectangle{X: 20, Y: 470, Width: 360, Height: 110})
 
 	mouse := rl.GetMousePosition()
 	if i := hoveredFishIndex(s.Fish, mouse); i >= 0 {

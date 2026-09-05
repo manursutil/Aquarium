@@ -28,10 +28,11 @@ func main() {
 		dt := rl.GetFrameTime()
 		aquarium.Step(dt)
 		snapshot := aquarium.Snapshot()
+		history := aquarium.History()
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Blue)
-		drawAquarium(snapshot)
+		drawAquarium(snapshot, history)
 
 		rl.EndDrawing()
 	}
