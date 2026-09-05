@@ -102,7 +102,7 @@ func (f *Fish) move(dt float32) {
 }
 
 func (f *Fish) handleHunger(dt float32, config Config) {
-	f.Hunger += f.Genome.Metabolism * dt
+	f.Hunger += hungerRate(*f, config) * dt
 	if f.Hunger > MaxHunger {
 		f.Hunger = MaxHunger
 	}
