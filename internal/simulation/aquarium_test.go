@@ -39,7 +39,13 @@ func TestUpdateRetainsDeadFishFitnessForGeneration(t *testing.T) {
 		t.Fatalf("candidate count = %d, want 1", got)
 	}
 
-	wantCandidate := Candidate{Genome: deadGenome, Fitness: 24}
+	wantCandidate := Candidate{
+		Genome:    deadGenome,
+		Fitness:   24,
+		Age:       4,
+		FoodEaten: 2,
+		FishEaten: 1,
+	}
 	if got := aquarium.generationCandidates[0]; got != wantCandidate {
 		t.Fatalf("dead fish candidate = %+v, want %+v", got, wantCandidate)
 	}
