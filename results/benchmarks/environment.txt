@@ -1,0 +1,4 @@
+macOS-26.6.2-arm64-arm-64bit
+go version go1.27.1 darwin/arm64
+CGO_ENABLED=0
+go test ./internal/simulation -run=^$ -bench=^BenchmarkCohort60Steps$ -benchmem -benchtime=1s -count=5 -cpu=1

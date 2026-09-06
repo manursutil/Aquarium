@@ -1,0 +1,26 @@
+goos: darwin
+goarch: arm64
+pkg: aquarium/internal/simulation
+cpu: Apple M4
+BenchmarkCohort60Steps/population_50         	    1725	    691985 ns/op	   30632 B/op	      19 allocs/op
+BenchmarkCohort60Steps/population_50         	    1765	    680464 ns/op	   30632 B/op	      19 allocs/op
+BenchmarkCohort60Steps/population_50         	    1760	    680931 ns/op	   30632 B/op	      19 allocs/op
+BenchmarkCohort60Steps/population_50         	    1761	    680261 ns/op	   30632 B/op	      19 allocs/op
+BenchmarkCohort60Steps/population_50         	    1767	    682384 ns/op	   30632 B/op	      19 allocs/op
+BenchmarkCohort60Steps/population_100        	     697	   1704231 ns/op	   59336 B/op	      23 allocs/op
+BenchmarkCohort60Steps/population_100        	     702	   1696117 ns/op	   59336 B/op	      23 allocs/op
+BenchmarkCohort60Steps/population_100        	     710	   1694511 ns/op	   59336 B/op	      23 allocs/op
+BenchmarkCohort60Steps/population_100        	     706	   1710901 ns/op	   59336 B/op	      23 allocs/op
+BenchmarkCohort60Steps/population_100        	     703	   1696501 ns/op	   59336 B/op	      23 allocs/op
+BenchmarkCohort60Steps/population_250        	     308	   3865907 ns/op	  199304 B/op	      29 allocs/op
+BenchmarkCohort60Steps/population_250        	     310	   3853333 ns/op	  199304 B/op	      29 allocs/op
+BenchmarkCohort60Steps/population_250        	     310	   3853229 ns/op	  199304 B/op	      29 allocs/op
+BenchmarkCohort60Steps/population_250        	     310	   3853991 ns/op	  199304 B/op	      29 allocs/op
+BenchmarkCohort60Steps/population_250        	     307	   3873539 ns/op	  199304 B/op	      29 allocs/op
+BenchmarkCohort60Steps/population_500        	     256	   4514667 ns/op	  387752 B/op	      32 allocs/op
+BenchmarkCohort60Steps/population_500        	     271	   4413637 ns/op	  387752 B/op	      32 allocs/op
+BenchmarkCohort60Steps/population_500        	     271	   4415050 ns/op	  387752 B/op	      32 allocs/op
+BenchmarkCohort60Steps/population_500        	     264	   4495411 ns/op	  387752 B/op	      32 allocs/op
+BenchmarkCohort60Steps/population_500        	     271	   4418009 ns/op	  387752 B/op	      32 allocs/op
+PASS
+ok  	aquarium/internal/simulation	24.078s

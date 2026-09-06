@@ -1,128 +1,217 @@
-# Aquarium Genetic Algorithm
+# Aquarium
 
-An evolutionary aquarium simulation written in Go with Raylib. Fish inherit
-physical and behavioral traits, seek food, interact through color and size,
-and produce new generations through selection, crossover, mutation, and
-elitism.
+Watch fish evolve inherited traits as they compete for food and prey in a Go simulation with a Raylib interface.
 
-The project is under development. The current version includes generation
-tracking, fitness evaluation, bounded genome mutation, an on-screen HUD, and a
-fish inspector.
+## Install requirements
 
-## Run
+Install [Go **1.27.1+**](https://go.dev/dl/) and the platform dependencies below
+for the default cgo build. Check your Go version with `go version`.
 
-Requires Go 1.27.1 or later.
+You do **not** need to install Raylib separately: `raylib-go` includes the C
+source and compiles it with the Go bindings. You need a C compiler and the
+system graphics libraries. See the [binding's requirements](https://github.com/gen2brain/raylib-go#requirements).
+
+### macOS
+
+Install Apple's Command Line Tools (skip if you have Xcode or the tools):
 
 ```sh
+xcode-select --install
+```
+
+Use the Go installer linked above. The Apple SDK provides the required system
+frameworks. See [Raylib's macOS guide](https://github.com/raysan5/raylib/wiki/Working-on-macOS)
+for toolchain troubleshooting.
+
+### Linux
+
+Install Go from the link above if your distribution packages an older version.
+Install the compiler and OpenGL, X11, and Wayland development libraries:
+
+**Debian / Ubuntu**
+
+```sh
+sudo apt update
+sudo apt install build-essential libgl1-mesa-dev libx11-dev libxi-dev \
+  libxcursor-dev libxrandr-dev libxinerama-dev libwayland-dev libxkbcommon-dev
+```
+
+**Fedora**
+
+```sh
+sudo dnf install gcc mesa-libGL-devel libX11-devel libXi-devel \
+  libXcursor-devel libXrandr-devel libXinerama-devel wayland-devel libxkbcommon-devel
+```
+
+Run the app in a graphical desktop session with OpenGL 3.3 support. For other
+distributions, see [Raylib's Linux guide](https://github.com/raysan5/raylib/wiki/Working-on-GNU-Linux).
+
+### Windows
+
+Install Go and a C compiler such as MinGW-w64, with `gcc` on your `PATH`.
+Follow [Raylib's Windows guide](https://github.com/raysan5/raylib/wiki/Working-on-Windows)
+for toolchain setup, and check the [Go binding's Windows requirements](https://github.com/gen2brain/raylib-go#windows)
+for binding-specific details.
+
+You need Python and `uv` only for the chart scripts; see [Tests and benchmarks](#tests-and-benchmarks).
+For headless experiments and core tests, you can use Go without the graphics dependencies.
+
+## Run and controls
+
+From the cloned repository root, download the Go dependencies and launch:
+
+```sh
+go mod download
 go run ./cmd/aquarium
 ```
 
-Space pauses or resumes. Keys `1`, `2`, and `3` select 1x, 5x, and 20x.
-`R` restarts the displayed seed; `N` starts a new seed. Restarts preserve
-configuration, pause/speed, and overlay preferences, and clear selection,
-timing backlog, and summaries. Catch-up is capped at 40 steps per frame;
-excess time is discarded after a stalled frame, so effective speed can drop
-under load.
+Start with seed 42, 50 fish, and 35 food items. Advance the simulation at fixed
+1/60-second steps; each generation lasts up to 30 simulated seconds.
 
-The HUD shows the seed, controls, and current settings. Completed generations
-show a two-second summary using wall time, including while paused. Press `S`
-to hide summaries at 20x. The fitness chart remains visible below the summary.
+| Input | Action |
+| --- | --- |
+| Space | Pause / resume |
+| `1` / `2` / `3` | Set speed to 1× / 5× / 20× |
+| `R` / `N` | Restart the same seed / start a new seed |
+| Hover / click fish | Inspect / pin inspector |
+| Escape | Close ancestry and unpin |
+| `V` / `F` | Toggle pinned fish's vision / steering vectors |
+| `A` / `B` | Inspect pinned fish's ancestry / last generation's best fish |
+| `S` | Toggle generation summaries at 20× |
 
-Click a fish to pin its inspector; Escape unpins it. Press `V` to toggle the
-pinned fish's vision circle and `F` to toggle its steering vectors. Both overlays
-start disabled. Green is food, gold is social attraction, magenta is predator
-response, and the thicker white line is their combined response before wandering.
-Component lines are 60 pixels long and the combined line is 80 pixels: they show
-direction, not magnitude. A zero response draws no line. The snapshot retains
-the actual velocity changes after behavioral weighting and acceleration/speed
-limits; overlays do not change simulation behavior.
+Use the HUD to track generations and fitness, and the inspector to compare
+traits, parents, and color groups. Vector overlays show direction, not magnitude.
+At high load, the 40-step frame cap can reduce the effective simulation speed.
 
-## Test
+## Genetic algorithm
+
+1. **Initialize:** sample size, maximum speed, vision, metabolism, three behavior
+   weights, and RGB color for each fish.
+2. **Evaluate:** let fish feed, move, and hunt until the generation timer expires
+   or the population dies out. Score living and dead fish with
+   `fitness = age_seconds + 5 × food_eaten + 10 × fish_eaten`.
+3. **Select:** copy the best genome into one elite offspring. For each remaining
+   child, pick two parents through separate four-draw tournaments with replacement.
+4. **Breed:** average the parents' traits and RGB channels. Mutate each numeric
+   trait with probability 0.15, adding up to ±10% of its legal range and clamping
+   at the bounds. With probability 0.15, jitter one color channel by up to ±15.
+5. **Replace:** spawn a full cohort with new IDs; retain parent IDs and repeat.
+
+Fish pay hunger costs for movement (actual speed squared), size, and vision.
+Larger fish have lower steering acceleration. Predators need a size advantage
+and sufficient color distance. For the equations and bounds, see the
+[experiment notes](docs/experiments/evolutionary-tradeoffs.md#rules).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    UI["cmd/aquarium\nRaylib, controls, HUD, inspector"] -->|Step, Snapshot, Lineage| SIM
+    CLI["cmd/experiment\nseed + configuration"] -->|Step, History| SIM
+    SIM["internal/simulation\nmovement, energy, evolution, lineage"]
+    CLI --> REPORT["internal/report\ngeneration, lineage, color-group CSV"]
+    REPORT --> CSV["results/*.csv"]
+    CSV --> PY["scripts/*.py\npaired comparisons + charts"]
+```
+
+Keep world rules in `internal/simulation`, which has no graphics dependency.
+Use `New(config, seed)`, `Step(dt)`, and `Snapshot()` to embed the simulation.
+With the same seed, configuration, and step sequence, you can replay a run.
+Snapshots and lineage queries return copies.
+
+Track ancestry across ten completed generations plus the current cohort.
+Treat color groups as RGB clusters within a sample; group IDs do not identify
+species across generations.
+
+## Experiments
+
+Compare **7 treatments × 10 paired seeds × 30 generations**, with 50 fish,
+35 respawning food items, and 30 seconds per generation.
+
+| Metric | Zero-cost baseline | Combined treatment |
+| --- | ---: | ---: |
+| Mean best fitness | 175.54 | 128.03 |
+| Mean survivors | 45.75 | 32.52 |
+| Final mean size | 28.24 | 26.97 |
+| Final mean maximum speed | 65.29 | 59.72 |
+
+Average fitness and survivors across seeds and generations; average final traits
+across seeds at generation 30, including dead fish.
+
+![Trait and survival variation across ten seeds](docs/images/experiments.png)
+
+With the combined treatment, fish evolved smaller sizes in 8/10 seed pairs and
+lower maximum speeds in 7/10. Survival fell in 10/10 pairs. With movement cost
+alone, fish evolved *higher* maximum speeds in 9/10 pairs. Increased feeding
+under higher hunger is a possible explanation.
+
+The combined treatment changes energy costs, steering acceleration, and predation
+ratio together, so you cannot attribute its effects to one parameter. Ten seeds
+and 30 generations provide limited evidence for stable niches. See the
+[full results and limitations](docs/experiments/evolutionary-tradeoffs.md).
+The app uses predation ratio **1.0**; the combined experiment uses **1.2**.
+
+```sh
+# Rerun all 70 experiments and regenerate the summary CSV.
+python3 scripts/tradeoff_experiment.py
+
+# Or recompute the summary from the committed CSVs.
+python3 scripts/tradeoff_experiment.py --summarize-only
+
+# Run a headless experiment with optional ancestry and color-group exports.
+go run ./cmd/experiment -seed 42 -generations 30 -run-id demo-42 \
+  -output /tmp/generations.csv -lineage-output /tmp/lineage.csv \
+  -groups-output /tmp/groups.csv
+```
+
+Use `go run ./cmd/experiment -h` for parameters. Supply a distinct `-run-id` for
+separate runs; reuse it for byte-identical replay checks.
+
+## Tests and benchmarks
 
 ```sh
 go test ./...
-```
-
-## Simulation API
-
-`internal/simulation` owns world rules, food, movement, evolution, and generation
-timing without importing Raylib. Create a world with
-`simulation.New(simulation.DefaultConfig(), 42)`, advance it with `Step(dt)`
-(seconds), and read `Snapshot()`. Snapshots own their slices and do not expose
-live state. The same seed, configuration, and sequence of time steps reproduce
-the same run.
-
-`cmd/aquarium` owns the window, drawing, HUD, and hover inspector. It currently
-starts with seed 42 and fixed 1/60-second simulation steps. Default tuning preserves the original
-strictly-larger-fish predation rule; configuration can require a larger ratio.
-
-Run the core and many-generation replay tests without graphics dependencies:
-
-```sh
-CGO_ENABLED=0 go test ./internal/simulation ./tests/integration
 go vet ./...
+
+# Test the core, reports, and integration flows without graphics dependencies.
+CGO_ENABLED=0 go test ./internal/simulation ./internal/report ./tests/integration
 ```
 
-## Evolutionary trade-offs
+Check genome bounds, energy accounting, steering and predation rules, lineage,
+CSV exports, and deterministic replay across generations with the Go tests.
 
-Movement, size, and vision contribute configurable hunger costs. Movement uses
-actual speed squared; larger fish also have slower steering responses.
-Predation can require a configurable size advantage. See the
-[milestone 4 experiment](docs/experiments/milestone-4.md) for equations,
-limitations, and paired results from ten seeds: the combined rules produced
-smaller, slower populations, with fewer survivors and lower best fitness.
-
-Reproduce the experiments with `python3 scripts/tradeoff_experiment.py`, or run
-one treatment directly:
+After cloning, install `uv` and run these commands from the repository root.
+Create the local Python environment once:
 
 ```sh
-go run ./cmd/experiment -seed 42 -generations 30 -population 50 \
-  -step 0.0166667 -speed-energy 0.2 -size-energy 0.1 -vision-energy 0.1 \
-  -predation-ratio 1.2 -acceleration 30 -output results/tradeoff-42.csv
+uv venv --python 3.12 scripts/.venv
+uv pip install --python scripts/.venv/bin/python -r scripts/requirements.txt
 ```
 
-Use zero energy weights and `-acceleration 0 -predation-ratio 1` for the control.
-
-## Lineage and color groups
-
-The inspector shows birth generation, parents, elite provenance, and the living
-population's color group/share. Pin a fish and press `A` to inspect three ancestry
-levels. Press `B` to inspect the latest completed generation's best fish, even
-after it leaves the live population. Escape closes ancestry and unpins selection.
-Shared ancestors appear once with references from both branches.
-
-Founders have no parents. Crossover children retain both selected parent IDs
-(which can be equal). Elite copies receive a new ID and retain the best
-candidate's genome with one source parent. Fish IDs are unique within a run;
-restarting can reuse them. Completed records distinguish death from replacement
-at rollover and retain final fitness; active records expose current fitness.
-`Lineage(id)` and `LineageRecords()` return copies. `Config.LineageGenerations`
-defaults to ten completed generations (minimum one), plus the current cohort.
-Older IDs remain visible as “outside retained history” in ancestry.
-
-Color groups are a reporting approximation for the roadmap's “species.” They
-use an independent RGB Euclidean threshold of 60. Fish are processed in ID order
-and assigned to the nearest fixed representative within the threshold, with ties
-favoring the lower group ID. New groups start at 1 in each sample. Display colors
-are the mean member RGB, rounded down. Members can be farther apart than the
-threshold, and group IDs do not track a species across generations. Grouping
-consumes no simulation randomness and does not affect steering or predation.
-
-Export ancestry and group summaries alongside the unchanged generation CSV:
+Run the charts without activating the environment:
 
 ```sh
-go run ./cmd/experiment -seed 42 -generations 12 -duration 0.2 -population 12 \
-  -run-id demo-42 -output /tmp/generations.csv \
-  -lineage-output /tmp/lineage.csv -groups-output /tmp/groups.csv
+scripts/.venv/bin/python scripts/plot_experiments.py
+scripts/.venv/bin/python scripts/plot_benchmarks.py
 ```
 
-The command streams each completed cohort before retention can evict it, then
-exports the new active cohort at the stopping point with an empty end reason
-and current fitness. Each individual appears once. Group rows label `completed`
-(all evaluated fish, including deaths) or `living` (the final active sample),
-and include the threshold, population, share, mean fitness, and mean RGB.
-Use `-color-group-threshold` to change export grouping independently of the
-simulation. Combine runs by `(seed, run_id, fish_id)`; supply a distinct run ID
-for each run, or use the default UTC timestamp. For byte-identical replay checks,
-reuse an explicit run ID. Output files must have distinct paths.
+Keep `scripts/.venv` on your machine; Git ignores it. On Windows, use
+`scripts/.venv/Scripts/python.exe` in place of `scripts/.venv/bin/python`.
+The experiment chart needs only the saved CSVs; the benchmark also needs Go.
 
+Generate the experiment chart from the committed generation CSVs. For benchmarks,
+measure initialization plus 60 simulation steps at 50, 100, 250, and 500 initial
+fish, using seed 42, default rules, one CPU, and five repeats. Fish can die during
+the workload. Exclude rendering and snapshot copying; interpret timing as cost
+per workload, not display FPS or steady-state cost per fish.
+
+See the [benchmark chart](results/benchmarks/benchmark.png), with raw Go output,
+environment details, and per-repeat CSV in `results/benchmarks/`. On an Apple M4
+with Go 1.27.1, median workload times were 0.68 / 1.70 / 3.85 / 4.42 ms for
+50 / 100 / 250 / 500 initial fish. Compare timings on the same machine and toolchain.
+To run the benchmark without Python:
+
+```sh
+CGO_ENABLED=0 go test ./internal/simulation -run='^$' \
+  -bench='^BenchmarkCohort60Steps$' -benchmem -benchtime=1s -count=5 -cpu=1
+```

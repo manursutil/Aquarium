@@ -1,3 +1,6 @@
 .DS_Store
 docs/dev/*
 docs/dev/validation/*
+
+__pycache__/
+scripts/.venv/
