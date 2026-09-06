@@ -2,6 +2,8 @@
 
 Watch fish evolve inherited traits as they compete for food and prey in a Go simulation with a Raylib interface.
 
+![Aquarium evolution at 20×, fitness HUD, and pinned fish inspector](docs/images/aquarium.gif)
+
 ## Install requirements
 
 Install [Go **1.27.1+**](https://go.dev/dl/) and the platform dependencies below
