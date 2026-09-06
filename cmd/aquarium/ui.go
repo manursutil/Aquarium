@@ -57,7 +57,7 @@ func hoveredFishIndex(fish []simulation.FishSnapshot, mouse rl.Vector2) int {
 }
 
 func fishTooltipLines(fish simulation.FishSnapshot, maxHealth float32, generation int) []string {
-	return []string{
+	lines := []string{
 		fmt.Sprintf("Fish %d | Generation %d", fish.ID, generation),
 		fmt.Sprintf("Speed: %.2f", math.Hypot(float64(fish.Velocity.X), float64(fish.Velocity.Y))),
 		fmt.Sprintf("Health: %.1f / %.1f", fish.Health, maxHealth),
@@ -81,6 +81,8 @@ func fishTooltipLines(fish simulation.FishSnapshot, maxHealth float32, generatio
 			fish.Genome.Color.B,
 		),
 	}
+	details := append([]string{lines[0]}, birthLines(fish.ParentA, fish.ParentB, fish.BornIn, fish.Elite)...)
+	return append(details, lines[1:]...)
 }
 
 func tooltipPosition(mouse rl.Vector2, width, height float32) rl.Vector2 {
@@ -102,26 +104,28 @@ func tooltipPosition(mouse rl.Vector2, width, height float32) rl.Vector2 {
 	return rl.Vector2{X: x, Y: y}
 }
 
-func drawFishTooltip(fish simulation.FishSnapshot, mouse rl.Vector2, maxHealth float32, generation int) {
-	lines := fishTooltipLines(fish, maxHealth, generation)
+func drawFishTooltip(fish simulation.FishSnapshot, mouse rl.Vector2, maxHealth float32, generation int, group string) {
+	lines := append([]string{group}, fishTooltipLines(fish, maxHealth, generation)...)
 	height := panelHeight(len(lines))
-	position := tooltipPosition(mouse, TooltipWidth, height)
+	width := max(TooltipWidth, measuredPanelWidth(lines))
+	position := tooltipPosition(mouse, width, height)
 
 	drawInfoPanel(
 		lines,
 		position.X,
 		position.Y,
-		TooltipWidth,
+		width,
 		toRaylibColor(fish.Color),
 	)
 
 	drawFishSelectionRing(fish)
 }
 
-func drawPinnedFishInspector(fish simulation.FishSnapshot, maxHealth float32, generation int) {
-	lines := append([]string{"Pinned fish (Esc to unpin)", ""}, fishTooltipLines(fish, maxHealth, generation)...)
-	x := max(UIBorder, float32(rl.GetScreenWidth())-TooltipWidth-UIBorder)
-	drawInfoPanel(lines, x, UIBorder, TooltipWidth, toRaylibColor(fish.Color))
+func drawPinnedFishInspector(fish simulation.FishSnapshot, maxHealth float32, generation int, group string) {
+	lines := append([]string{"Pinned fish (A: ancestry)", group}, fishTooltipLines(fish, maxHealth, generation)...)
+	width := max(TooltipWidth, measuredPanelWidth(lines))
+	x := max(UIBorder, float32(rl.GetScreenWidth())-width-UIBorder)
+	drawInfoPanel(lines, x, UIBorder, width, toRaylibColor(fish.Color))
 	drawFishSelectionRing(fish)
 }
 
@@ -176,7 +180,7 @@ func drawControls(view ViewState) {
 		"Space pause   1/2/3 speed   R restart   N new seed",
 		"V vision   F steering   Click pin   Esc clear",
 		fmt.Sprintf("Vision: %s | Steering: %s | Pinned: %s", onOff(view.ShowVision), onOff(view.ShowSteering), pinned),
-		fmt.Sprintf("S hide summaries at 20x: %s", onOff(view.HideFastSummaries)),
+		fmt.Sprintf("S hide 20x summaries: %s | A ancestry | B best", onOff(view.HideFastSummaries)),
 	}
 	width := measuredPanelWidth(lines)
 	drawInfoPanel(lines, UIBorder, float32(rl.GetScreenHeight())-panelHeight(len(lines))-UIBorder, width, rl.SkyBlue)
@@ -185,7 +189,7 @@ func drawControls(view ViewState) {
 func drawGenerationSummary(stats simulation.GenerationStats) {
 	lines := []string{
 		fmt.Sprintf("Generation %d complete", stats.Generation),
-		fmt.Sprintf("Best fitness: %.1f", stats.BestFitness),
+		fmt.Sprintf("Best: #%d | fitness %.1f", stats.BestFishID, stats.BestFitness),
 		fmt.Sprintf("Mean fitness: %.1f", stats.MeanFitness),
 		fmt.Sprintf("Survivors: %d / %d", stats.Survivors, stats.Evaluated),
 		fmt.Sprintf("Food eaten: %d", stats.FoodEaten),

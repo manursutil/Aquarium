@@ -25,12 +25,15 @@ const (
 var noise = perlin.NewPerlin(NoiseAlpha, NoiseBeta, NoiseOctaves, NoiseSeed)
 
 type Fish struct {
-	ID       FishID
-	Position Vector2
-	Velocity Vector2
-	Angle    float32
-	Genome   Genome
-	steering SteeringSnapshot
+	ID               FishID
+	ParentA, ParentB FishID
+	BornIn           int
+	Elite            bool
+	Position         Vector2
+	Velocity         Vector2
+	Angle            float32
+	Genome           Genome
+	steering         SteeringSnapshot
 
 	NoiseX float64
 

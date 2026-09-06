@@ -11,6 +11,9 @@ type SteeringSnapshot struct {
 
 type FishSnapshot struct {
 	ID                           FishID
+	ParentA, ParentB             FishID
+	BornIn                       int
+	Elite                        bool
 	Position, Velocity           Vector2
 	Angle, Radius                float32
 	Color                        Color
@@ -34,7 +37,8 @@ func (s *Simulation) Snapshot() Snapshot {
 	fish := make([]FishSnapshot, len(s.fish))
 	for i, f := range s.fish {
 		fish[i] = FishSnapshot{
-			ID:        f.ID,
+			ID:      f.ID,
+			ParentA: f.ParentA, ParentB: f.ParentB, BornIn: f.BornIn, Elite: f.Elite,
 			Position:  f.Position,
 			Velocity:  f.Velocity,
 			Angle:     f.Angle,

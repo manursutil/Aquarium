@@ -10,11 +10,19 @@ const (
 )
 
 type Candidate struct {
+	FishID    FishID
 	Genome    Genome
 	Fitness   float32
 	Age       float32
 	FoodEaten int
 	FishEaten int
+}
+
+type Offspring struct {
+	Genome  Genome
+	ParentA FishID
+	ParentB FishID
+	Elite   bool
 }
 
 func fitness(f Fish) float32 {
@@ -23,6 +31,7 @@ func fitness(f Fish) float32 {
 
 func candidateFromFish(f Fish) Candidate {
 	return Candidate{
+		FishID:    f.ID,
 		Genome:    f.Genome,
 		Fitness:   fitness(f),
 		Age:       f.Age,
@@ -41,7 +50,7 @@ func makeCandidates(fish []Fish) []Candidate {
 	return candidates
 }
 
-func selectParent(rng *rand.Rand, candidates []Candidate) Genome {
+func selectParent(rng *rand.Rand, candidates []Candidate) Candidate {
 	best := candidates[rng.Intn(len(candidates))]
 
 	for range 3 {
@@ -51,7 +60,7 @@ func selectParent(rng *rand.Rand, candidates []Candidate) Genome {
 		}
 	}
 
-	return best.Genome
+	return best
 }
 
 func avgChannel(a uint8, b uint8) uint8 {
@@ -118,13 +127,13 @@ func mutate(rng *rand.Rand, config Config, g *Genome) {
 	}
 }
 
-func evolve(rng *rand.Rand, candidates []Candidate, config Config) []Genome {
+func evolve(rng *rand.Rand, candidates []Candidate, config Config) []Offspring {
 	populationSize := config.PopulationSize
 	if populationSize <= 0 || len(candidates) == 0 {
 		return nil
 	}
 
-	nextGeneration := make([]Genome, populationSize)
+	nextGeneration := make([]Offspring, populationSize)
 
 	best := candidates[0]
 	for _, candidate := range candidates[1:] {
@@ -135,16 +144,20 @@ func evolve(rng *rand.Rand, candidates []Candidate, config Config) []Genome {
 
 	eliteCount := min(config.EliteCount, populationSize)
 	for i := range eliteCount {
-		nextGeneration[i] = best.Genome
+		nextGeneration[i] = Offspring{Genome: best.Genome, ParentA: best.FishID, Elite: true}
 	}
 
 	for i := eliteCount; i < populationSize; i++ {
 		parent1 := selectParent(rng, candidates)
 		parent2 := selectParent(rng, candidates)
 
-		childGenome := crossover(parent1, parent2)
+		childGenome := crossover(parent1.Genome, parent2.Genome)
 		mutate(rng, config, &childGenome)
-		nextGeneration[i] = childGenome
+		nextGeneration[i] = Offspring{
+			Genome:  childGenome,
+			ParentA: parent1.FishID,
+			ParentB: parent2.FishID,
+		}
 	}
 
 	return nextGeneration

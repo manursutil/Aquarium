@@ -82,3 +82,47 @@ go run ./cmd/experiment -seed 42 -generations 30 -population 50 \
 ```
 
 Use zero energy weights and `-acceleration 0 -predation-ratio 1` for the control.
+
+## Lineage and color groups
+
+The inspector shows birth generation, parents, elite provenance, and the living
+population's color group/share. Pin a fish and press `A` to inspect three ancestry
+levels. Press `B` to inspect the latest completed generation's best fish, even
+after it leaves the live population. Escape closes ancestry and unpins selection.
+Shared ancestors appear once with references from both branches.
+
+Founders have no parents. Crossover children retain both selected parent IDs
+(which can be equal). Elite copies receive a new ID and retain the best
+candidate's genome with one source parent. Fish IDs are unique within a run;
+restarting can reuse them. Completed records distinguish death from replacement
+at rollover and retain final fitness; active records expose current fitness.
+`Lineage(id)` and `LineageRecords()` return copies. `Config.LineageGenerations`
+defaults to ten completed generations (minimum one), plus the current cohort.
+Older IDs remain visible as “outside retained history” in ancestry.
+
+Color groups are a reporting approximation for the roadmap's “species.” They
+use an independent RGB Euclidean threshold of 60. Fish are processed in ID order
+and assigned to the nearest fixed representative within the threshold, with ties
+favoring the lower group ID. New groups start at 1 in each sample. Display colors
+are the mean member RGB, rounded down. Members can be farther apart than the
+threshold, and group IDs do not track a species across generations. Grouping
+consumes no simulation randomness and does not affect steering or predation.
+
+Export ancestry and group summaries alongside the unchanged generation CSV:
+
+```sh
+go run ./cmd/experiment -seed 42 -generations 12 -duration 0.2 -population 12 \
+  -run-id demo-42 -output /tmp/generations.csv \
+  -lineage-output /tmp/lineage.csv -groups-output /tmp/groups.csv
+```
+
+The command streams each completed cohort before retention can evict it, then
+exports the new active cohort at the stopping point with an empty end reason
+and current fitness. Each individual appears once. Group rows label `completed`
+(all evaluated fish, including deaths) or `living` (the final active sample),
+and include the threshold, population, share, mean fitness, and mean RGB.
+Use `-color-group-threshold` to change export grouping independently of the
+simulation. Combine runs by `(seed, run_id, fish_id)`; supply a distinct run ID
+for each run, or use the default UTC timestamp. For byte-identical replay checks,
+reuse an explicit run ID. Output files must have distinct paths.
+

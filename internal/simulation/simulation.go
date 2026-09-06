@@ -21,11 +21,12 @@ const (
 )
 
 type Simulation struct {
-	config Config
-	rng    *rand.Rand
-	nextID FishID
-	fish   []Fish
-	food   []Food
+	config  Config
+	lineage map[FishID]LineageRecord
+	rng     *rand.Rand
+	nextID  FishID
+	fish    []Fish
+	food    []Food
 
 	generation           int
 	generationElapsed    float32
@@ -38,11 +39,11 @@ func New(config Config, seed int64) (*Simulation, error) {
 		return nil, err
 	}
 
-	a := &Simulation{config: config, rng: rand.New(rand.NewSource(seed)), generation: 1}
+	a := &Simulation{config: config, rng: rand.New(rand.NewSource(seed)), generation: 1, lineage: make(map[FishID]LineageRecord)}
 
 	a.fish = make([]Fish, config.PopulationSize)
 	for i := range a.fish {
-		a.fish[i] = a.spawn(initRandomGenome(a.rng))
+		a.fish[i] = a.spawnOffspring(Offspring{Genome: initRandomGenome(a.rng)}, 1)
 	}
 
 	a.food = make([]Food, config.FoodCount)
@@ -54,11 +55,17 @@ func New(config Config, seed int64) (*Simulation, error) {
 	return a, nil
 }
 
-func (a *Simulation) spawn(genome Genome) Fish {
+func (a *Simulation) spawnOffspring(child Offspring, bornIn int) Fish {
+	genome := child.Genome
 	f := newFish(a.rng, a.config, genome)
 
 	a.nextID++
 	f.ID = a.nextID
+	f.ParentA, f.ParentB, f.BornIn, f.Elite = child.ParentA, child.ParentB, bornIn, child.Elite
+	if a.lineage == nil {
+		a.lineage = make(map[FishID]LineageRecord)
+	}
+	a.lineage[f.ID] = recordFromFish(f)
 
 	return f
 }
@@ -73,6 +80,7 @@ func (a *Simulation) removeDead() {
 		}
 
 		a.generationCandidates = append(a.generationCandidates, candidateFromFish(f))
+		a.finalizeLineage(f, "death")
 	}
 
 	a.fish = alive
@@ -186,6 +194,10 @@ func (a *Simulation) advanceGeneration() {
 	candidates := append([]Candidate{}, a.generationCandidates...)
 	candidates = append(candidates, makeCandidates(a.fish)...)
 
+	for _, f := range a.fish {
+		a.finalizeLineage(f, "rollover")
+	}
+
 	stats := summarizeGeneration(a.generation, len(a.fish), candidates)
 	a.history = append(a.history, stats)
 
@@ -193,12 +205,13 @@ func (a *Simulation) advanceGeneration() {
 
 	nextFish := make([]Fish, len(nextGenomes))
 	for i, genome := range nextGenomes {
-		nextFish[i] = a.spawn(genome)
+		nextFish[i] = a.spawnOffspring(genome, a.generation+1)
 	}
 
 	a.fish = nextFish
 	a.generationCandidates = nil
 	a.generation++
+	a.evictLineage()
 }
 
 func (a *Simulation) bestCurrentFitness() float32 {

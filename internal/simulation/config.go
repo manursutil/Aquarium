@@ -7,6 +7,7 @@ import (
 
 // Config contains the tunable world and evolution parameters.
 type Config struct {
+	LineageGenerations                                           int
 	WorldWidth, WorldHeight                                      float32
 	PopulationSize, FoodCount                                    int
 	GenerationDuration                                           float32
@@ -22,6 +23,7 @@ type Config struct {
 
 func DefaultConfig() Config {
 	return Config{
+		LineageGenerations: 10,
 		WorldWidth:         800,
 		WorldHeight:        600,
 		PopulationSize:     50,
@@ -42,6 +44,9 @@ func DefaultConfig() Config {
 }
 
 func (c Config) Validate() error {
+	if c.LineageGenerations < 1 {
+		return fmt.Errorf("lineage generations must be at least one")
+	}
 	for name, value := range map[string]float32{
 		"world width":          c.WorldWidth,
 		"world height":         c.WorldHeight,

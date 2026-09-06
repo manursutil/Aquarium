@@ -52,6 +52,12 @@ func main() {
 		snapshot := app.sim.Snapshot()
 		history := app.sim.History()
 		pinFish(&app.view, snapshot.Fish, rl.GetMousePosition())
+		if rl.IsKeyPressed(rl.KeyA) && app.view.HasSelectedFish {
+			app.view.AncestryID = app.view.SelectedFishID
+		}
+		if rl.IsKeyPressed(rl.KeyB) && len(history) > 0 {
+			app.view.AncestryID = history[len(history)-1].BestFishID
+		}
 		app.view.clearMissingSelection(snapshot.Fish)
 		app.view.updateSummary(len(history), frameTime)
 
@@ -59,6 +65,9 @@ func main() {
 		rl.ClearBackground(rl.Blue)
 
 		drawAquarium(snapshot, history, app.view, app.seed)
+		if app.view.AncestryID != 0 {
+			drawAncestry(app.sim, app.view.AncestryID)
+		}
 
 		rl.EndDrawing()
 	}
@@ -90,6 +99,7 @@ func (app *AppState) restart(seed int64) {
 	app.accumulator = 0
 	app.view.HasSelectedFish = false
 	app.view.SelectedFishID = 0
+	app.view.AncestryID = 0
 	app.view.LastHistoryCount = 0
 	app.view.SummaryVisibleFor = 0
 }

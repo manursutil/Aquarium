@@ -74,6 +74,7 @@ func toRaylibColor(c simulation.Color) rl.Color {
 }
 
 func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats, view ViewState, seed int64) {
+	groups := liveColorGroupLines(s.Fish)
 	overlay := buildFishOverlay(s.Fish, view)
 	if overlay.ShowVision {
 		drawVision(overlay.Fish)
@@ -89,6 +90,10 @@ func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats, v
 		rl.DrawRectangle(int32(f.X), int32(f.Y), 10, 10, rl.Green)
 	}
 
+	if view.AncestryID != 0 {
+		drawControls(view)
+		return
+	}
 	drawHUD(s, view, seed)
 	drawControls(view)
 	if view.SummaryVisibleFor > 0 && len(history) > 0 && !(view.HideFastSummaries && view.SpeedMultiplier == 20) {
@@ -97,14 +102,14 @@ func drawAquarium(s simulation.Snapshot, history []simulation.GenerationStats, v
 	drawFitnessChart(history, rl.Rectangle{X: 20, Y: 390, Width: 360, Height: 100})
 	if view.HasSelectedFish {
 		if fish, found := fishByID(s.Fish, view.SelectedFishID); found {
-			drawPinnedFishInspector(fish, s.MaxHealth, s.Generation)
+			drawPinnedFishInspector(fish, s.MaxHealth, s.Generation, groups[fish.ID])
 			return
 		}
 	}
 
 	mouse := rl.GetMousePosition()
 	if i := hoveredFishIndex(s.Fish, mouse); i >= 0 {
-		drawFishTooltip(s.Fish[i], mouse, s.MaxHealth, s.Generation)
+		drawFishTooltip(s.Fish[i], mouse, s.MaxHealth, s.Generation, groups[s.Fish[i].ID])
 	}
 }
 

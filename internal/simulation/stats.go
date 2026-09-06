@@ -9,6 +9,7 @@ type TraitStats struct {
 }
 
 type GenerationStats struct {
+	BestFishID FishID
 	Generation int
 	Evaluated  int
 	Survivors  int
@@ -83,6 +84,14 @@ func summarizeGeneration(number int, survivors int, candidates []Candidate) Gene
 	if len(candidates) == 0 {
 		return stats
 	}
+
+	best := candidates[0]
+	for _, c := range candidates[1:] {
+		if c.Fitness > best.Fitness {
+			best = c
+		}
+	}
+	stats.BestFishID = best.FishID
 
 	fitnessValues := make([]float32, len(candidates))
 	sizes := make([]float32, len(candidates))

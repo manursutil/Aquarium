@@ -72,7 +72,7 @@ func TestEvolvePreservesBestGenomeAsElite(t *testing.T) {
 
 	nextGeneration := evolve(rng, candidates, testConfig(5))
 
-	if got := nextGeneration[0]; got != bestGenome {
+	if got := nextGeneration[0].Genome; got != bestGenome {
 		t.Fatalf("elite genome = %+v, want %+v", got, bestGenome)
 	}
 }

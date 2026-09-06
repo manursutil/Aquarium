@@ -7,6 +7,7 @@ import (
 )
 
 type ViewState struct {
+	AncestryID        simulation.FishID
 	HideFastSummaries bool
 	Paused            bool
 	SpeedMultiplier   int
@@ -43,6 +44,7 @@ func updateViewState(view *ViewState) {
 	}
 	if rl.IsKeyPressed(rl.KeyEscape) {
 		view.HasSelectedFish = false
+		view.AncestryID = 0
 	}
 }
 
