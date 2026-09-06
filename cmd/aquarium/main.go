@@ -37,9 +37,11 @@ func main() {
 
 	for !rl.WindowShouldClose() {
 		updateViewState(&app.view)
+
 		if rl.IsKeyPressed(rl.KeyR) {
 			app.restart(app.seed)
 		}
+
 		if rl.IsKeyPressed(rl.KeyN) {
 			seed := rand.Int64()
 			for seed == app.seed {
@@ -47,17 +49,23 @@ func main() {
 			}
 			app.restart(seed)
 		}
+
 		frameTime := rl.GetFrameTime()
 		app.advance(frameTime)
+
 		snapshot := app.sim.Snapshot()
 		history := app.sim.History()
+
 		pinFish(&app.view, snapshot.Fish, rl.GetMousePosition())
+
 		if rl.IsKeyPressed(rl.KeyA) && app.view.HasSelectedFish {
 			app.view.AncestryID = app.view.SelectedFishID
 		}
+
 		if rl.IsKeyPressed(rl.KeyB) && len(history) > 0 {
 			app.view.AncestryID = history[len(history)-1].BestFishID
 		}
+
 		app.view.clearMissingSelection(snapshot.Fish)
 		app.view.updateSummary(len(history), frameTime)
 
